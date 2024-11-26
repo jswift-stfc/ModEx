@@ -28,6 +28,9 @@ std::vector<std::pair<Window, NeXuSFile>> prepareSlices(const Window &window, in
         fmt::print("Individual slice duration is {} seconds.\n", sliceDuration);
     }
 
+    // Open the source NeXuS file
+    NeXuSFile sourceNxs(templatingSourceFilename);
+
     for (auto i = 0; i < nSlices; ++i)
     {
         std::stringstream outputFileName;
@@ -39,9 +42,14 @@ std::vector<std::pair<Window, NeXuSFile>> prepareSlices(const Window &window, in
         std::stringstream sliceName;
         sliceName << window.id() << i + 1;
 
-        auto &[newWin, nexus] = slices.emplace_back(Window(sliceName.str(), sliceStartTime, sliceDuration), NeXuSFile());
+        // Template the NeXuS file
+        NeXuSFile::templateTo(templatingSourceFilename, outputFileName.str());
 
-        nexus.templateFile(templatingSourceFilename, outputFileName.str());
+        auto &[newWin, nexus] =
+            slices.emplace_back(Window(sliceName.str(), sliceStartTime, sliceDuration), NeXuSFile(outputFileName.str()));
+        nexus.loadBasicData();
+        nexus.prepareSpectraSpace();
+        nexus.loadMonitorCounts();
 
         sliceStartTime += sliceDuration;
     }

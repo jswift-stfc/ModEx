@@ -15,7 +15,7 @@ runs:
   - name: Install Python Dependencies
     shell: bash
     run: |
-      pip3 install --user conan==1.*
+      pip3 install --user conan==1.* --break-system-packages
 
   - name: Download HDF5 Artifacts
     shell: bash
@@ -29,11 +29,10 @@ runs:
       set -ex
       export PATH="$(python3 -m site --user-base)/bin:$PATH"
       HDF5_DIR="$(pwd)/${{ env.hdf5tag }}"
-      GSL_DIR="/usr/local/Cellar/gsl/2.7.1"
       mkdir build && cd build
 
       conan install ../
-      cmake ../ -G Ninja -DCMAKE_Fortran_COMPILER:string="gfortran-11" -DLOCAL_STATIC_HDF5:bool=true -DHDF5_DIR:path=${HDF5_DIR} -DLOCAL_STATIC_GSL:bool=true -DGSL_DIR:path=${GSL_DIR}
+      cmake ../ -G Ninja -DLOCAL_STATIC_HDF5:bool=true -DHDF5_DIR:path=${HDF5_DIR}
       ninja
 
   - name: Create Zip

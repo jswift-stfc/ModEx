@@ -1,16 +1,19 @@
-add_library(nexusProcess
+add_library(
+  nexusProcess
+  dumpDetector.cpp
+  dumpMonitor.cpp
   getEvents.cpp
   nexusFile.cpp
+  partitionEventsIndividual.cpp
+  partitionEventsSummed.cpp
   processCommon.cpp
-  processIndividual.cpp
-  processSummed.cpp
   window.cpp
   nexusFile.h
   processors.h
-  window.h
-)
+  window.h)
 
-target_include_directories(nexusProcess PRIVATE ${PROJECT_SOURCE_DIR}/src ${CONAN_INCLUDE_DIRS})
+target_include_directories(nexusProcess PRIVATE ${PROJECT_SOURCE_DIR} / src
+                                                ${CONAN_INCLUDE_DIRS})
 
 if(CONAN)
   target_link_libraries(nexusProcess PUBLIC CONAN_PKG::fmt)

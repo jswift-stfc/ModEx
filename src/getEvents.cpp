@@ -2,39 +2,47 @@
 #include "processors.h"
 #include "window.h"
 #include <fmt/core.h>
+#include <fstream>
+#include <iostream>
 #include <optional>
 
 namespace Processors
 {
-// Get events from specified spectrum, returning seconds since epoch for each
-std::map<int, std::vector<double>> getEvents(const std::vector<std::string> &inputNeXusFiles, int spectrumId, bool firstOnly)
+void dumpEventTimesEpoch(const std::vector<std::string> &inputNeXusFiles, int detectorIndex, bool toStdOut)
 {
     /*
-     * Dump all events for the specified detector spectrum
+     * Get all events for the specified detector spectrum, returning seconds since epoch for each
      */
 
-    printf("Get events...\n");
-    fmt::print("Target detector spectrum is {}\n", spectrumId);
+    fmt::print("Retrieving all events from detector index {}...\n", detectorIndex);
 
-    std::map<int, std::vector<double>> eventMap;
-    std::optional<double> lastSecondsSinceEpoch;
-
-    // Loop over input Nexus files
+    // Loop over input NeXuS files
     for (auto &nxsFileName : inputNeXusFiles)
     {
-        // Open the Nexus file ready for use
+        // Open the NeXuS file ready for use
         NeXuSFile nxs(nxsFileName);
+        nxs.prepareSpectraSpace();
         nxs.loadEventData();
-        nxs.loadTimes();
-        fmt::print("... file '{}' has {} events...\n", nxsFileName, nxs.eventTimes().size());
 
+        std::optional<double> lastSecondsSinceEpoch;
         auto eventStart = 0, eventEnd = 0;
         const auto &eventsPerFrame = nxs.eventsPerFrame();
         const auto &eventIndices = nxs.eventIndices();
         const auto &eventTimes = nxs.eventTimes();
         const auto &frameOffsets = nxs.frameOffsets();
+        const auto spectrumId = nxs.spectrumForDetector(detectorIndex);
+        fmt::print("NeXuS file spectrum ID for detector index {} is {}.\n", detectorIndex, spectrumId);
 
-        // Loop over frames in the Nexus file
+        std::ofstream fileOutput;
+
+        if (!toStdOut)
+            fileOutput.open(fmt::format("{}.events.{}", nxsFileName, detectorIndex).c_str());
+
+        std::ostream &output = toStdOut ? std::cout : fileOutput;
+        output << fmt::format("# {:20s}  {:20s}  {:20s}  {}\n", "frame_offset(us)", "start_time_offset(s)", "epoch_offset(s)",
+                              "delta(s)");
+
+        // Loop over frames in the NeXuS file
         for (auto frameIndex = 0; frameIndex < nxs.eventsPerFrame().size(); ++frameIndex)
         {
             // Set new end event index and get zero for frame
@@ -49,23 +57,23 @@ std::map<int, std::vector<double>> getEvents(const std::vector<std::string> &inp
                     auto eSeconds = eMicroSeconds * 0.000001;
                     auto eSecondsSinceEpoch = eSeconds + frameZero + nxs.startSinceEpoch();
                     if (lastSecondsSinceEpoch)
-                        fmt::print("{:20.6f}  {:20.10f}  {:20.5f}  {}\n", eMicroSeconds, eSeconds + frameZero,
-                                   eSecondsSinceEpoch, eSecondsSinceEpoch - *lastSecondsSinceEpoch);
+                        output << fmt::format("{:20.6f}  {:20.10f}  {:20.5f}  {}\n", eMicroSeconds, eSeconds + frameZero,
+                                              eSecondsSinceEpoch, eSecondsSinceEpoch - *lastSecondsSinceEpoch);
                     else
-                        fmt::print("{:20.6f}  {:20.10f}  {:20.5f}\n", eMicroSeconds, eSeconds + frameZero, eSecondsSinceEpoch);
-                    eventMap[spectrumId].push_back(eSecondsSinceEpoch);
+                        output << fmt::format("{:20.6f}  {:20.10f}  {:20.5f}\n", eMicroSeconds, eSeconds + frameZero,
+                                              eSecondsSinceEpoch);
+
                     lastSecondsSinceEpoch = eSecondsSinceEpoch;
-                    if (firstOnly)
-                        return eventMap;
                 }
             }
 
             // Update start event index
             eventStart = eventEnd;
         }
-    }
 
-    return eventMap;
+        if (!toStdOut)
+            fileOutput.close();
+    }
 }
 
 } // namespace Processors

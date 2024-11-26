@@ -44,6 +44,7 @@ if(LOCAL_STATIC_GSL)
 else(LOCAL_STATIC_GSL)
   find_package(GSL REQUIRED)
   list(APPEND LINK_LIBS "${GSL_LIBRARIES}")
+  include_directories("${GSL_INCLUDE_DIRS}")
 endif(LOCAL_STATIC_GSL)
 
 option(

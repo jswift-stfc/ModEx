@@ -6,34 +6,36 @@
 
 namespace Processors
 {
-// Perform summed processing
-void processIndividual(const std::vector<std::string> &inputNeXusFiles, std::string_view outputFilePath,
-                       const Window &windowDefinition, int nSlices, double windowDelta)
+// Partition events into individual windows / slices
+void partitionEventsIndividual(const std::vector<std::string> &inputNeXusFiles, std::string_view outputFilePath,
+                               const Window &windowDefinition, int nSlices, double windowDelta)
 {
     /*
      * From our main windowDefinition we will continually propagate it forwards in time (by the window delta) splitting it into
      * nSlices and until we go over the end time of the current file.
      */
 
-    fmt::print("Processing in INDIVIDUAL mode...\n");
+    fmt::print("Partitioning events into individual windows/slices...\n");
 
     // Copy the master window definition since we will be modifying it
     auto window = windowDefinition;
     std::vector<std::pair<Window, NeXuSFile>> slices;
     auto sliceIt = slices.end();
 
-    // Loop over input Nexus files
+    // Loop over input NeXuS files
     for (auto &nxsFileName : inputNeXusFiles)
     {
         // Open the NeXuS file and get its event data
         NeXuSFile nxs(nxsFileName, true);
+        nxs.prepareSpectraSpace();
+        nxs.loadEventData();
 
         const auto &eventsPerFrame = nxs.eventsPerFrame();
         const auto &eventIndices = nxs.eventIndices();
         const auto &eventTimes = nxs.eventTimes();
         const auto &frameOffsets = nxs.frameOffsets();
 
-        // Loop over frames in the Nexus file
+        // Loop over frames in the NeXuS file
         auto eventStart = 0, eventEnd = 0;
         for (auto frameIndex = 0; frameIndex < nxs.eventsPerFrame().size(); ++frameIndex)
         {

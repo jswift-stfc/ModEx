@@ -1,20 +1,21 @@
 #include "nexusFile.h"
 #include "processors.h"
 #include "window.h"
+#include <fmt/core.h>
 #include <stdexcept>
 
 namespace Processors
 {
-// Perform summed processing
-void processSummed(const std::vector<std::string> &inputNeXusFiles, std::string_view outputFilePath,
-                   const Window &windowDefinition, int nSlices, double windowDelta)
+// Partition events into summed windows / slices
+void partitionEventsSummed(const std::vector<std::string> &inputNeXusFiles, std::string_view outputFilePath,
+                           const Window &windowDefinition, int nSlices, double windowDelta)
 {
     /*
      * From our main windowDefinition we will continually propagate it forwards in time (by the window delta) splitting it into
      * nSlices and until we go over the end time of the current file.
      */
 
-    printf("Processing in SUMMED mode...\n");
+    fmt::print("Partitioning events in summed windows/slices...\n");
 
     // Generate a new set of window "slices" and associated output NeXuS files to sum data into
     auto slices = prepareSlices(windowDefinition, nSlices, inputNeXusFiles[0], outputFilePath);
@@ -22,18 +23,19 @@ void processSummed(const std::vector<std::string> &inputNeXusFiles, std::string_
     // Initialise the slice iterator and window slice / NeXuSFile references
     auto sliceIt = slices.begin();
 
-    // Loop over input Nexus files
+    // Loop over input NeXuS files
     for (auto &nxsFileName : inputNeXusFiles)
     {
         // Open the NeXuS file and get its event data
         NeXuSFile nxs(nxsFileName, true);
+        nxs.loadEventData();
 
         const auto &eventsPerFrame = nxs.eventsPerFrame();
         const auto &eventIndices = nxs.eventIndices();
         const auto &eventTimes = nxs.eventTimes();
         const auto &frameOffsets = nxs.frameOffsets();
 
-        // Loop over frames in the Nexus file
+        // Loop over frames in the NeXuS file
         auto eventStart = 0, eventEnd = 0;
         for (auto frameIndex = 0; frameIndex < nxs.eventsPerFrame().size(); ++frameIndex)
         {

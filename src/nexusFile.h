@@ -9,8 +9,15 @@
 class NeXuSFile
 {
     public:
-    NeXuSFile(std::string filename = "", bool loadEvents = false);
-    ~NeXuSFile() = default;
+    NeXuSFile(std::string filename = "", bool printInfo = false);
+    void operator=(NeXuSFile &source);
+    NeXuSFile(const NeXuSFile &source);
+    NeXuSFile(NeXuSFile &&source);
+    ~NeXuSFile();
+    // Clear all data and arrays
+    void clear();
+    // Copy data from specified source
+    void copy(const NeXuSFile &source, bool deepCopyHistograms = true);
 
     /*
      * I/O
@@ -26,14 +33,18 @@ class NeXuSFile
     public:
     // Return filename
     std::string filename() const;
-    // Template basic paths from the referenceFile, and make ready for histogram binning
-    void templateFile(std::string referenceFile, std::string outputFile);
-    // Load frame counts
-    void loadFrameCounts();
+    // Load basic information from the NeXuS file
+    void loadBasicData(bool printInfo = false);
+    // Template a new NeXusFile from that specified
+    static void templateTo(std::string sourceFilename, std::string newFilename);
+    // Prepare spectra storage, including loading TOF boundaries etc.
+    void prepareSpectraSpace(bool printInfo = false);
+    // Load in monitor histograms
+    void loadMonitorCounts();
     // Load event data
     void loadEventData();
-    // Load start/end times
-    void loadTimes();
+    // Load detector counts from the file
+    void loadDetectorCounts();
     // Save key modified data back to the file
     bool saveModifiedData();
 
@@ -41,7 +52,8 @@ class NeXuSFile
      * Data
      */
     private:
-    std::vector<int> spectra_;
+    std::vector<int> detectorSpectrumIndices_;
+    int nMonitorSpectra_{0};
     int nMonitorFrames_{0};
     int nDetectorFrames_{0};
     int nGoodFrames_{0};
@@ -51,10 +63,10 @@ class NeXuSFile
     std::vector<double> eventTimes_;
     std::vector<int> eventsPerFrame_;
     std::vector<double> frameOffsets_;
-    std::vector<double> tofBins_;
+    std::vector<double> tofBoundaries_;
     std::map<int, std::vector<int>> monitorCounts_;
+    std::map<unsigned int, std::vector<int>> detectorCounts_;
     std::map<unsigned int, gsl_histogram *> detectorHistograms_;
-    std::map<unsigned int, std::vector<double>> partitions_;
 
     public:
     [[nodiscard]] int nGoodFrames() const;
@@ -67,10 +79,11 @@ class NeXuSFile
     [[nodiscard]] const std::vector<double> &eventTimes() const;
     [[nodiscard]] const std::vector<int> &eventsPerFrame() const;
     [[nodiscard]] const std::vector<double> &frameOffsets() const;
-    [[nodiscard]] const std::vector<double> &tofBins() const;
+    [[nodiscard]] const std::vector<double> &tofBoundaries() const;
+    [[nodiscard]] const int spectrumForDetector(int detectorId) const;
     [[nodiscard]] const std::map<int, std::vector<int>> &monitorCounts() const;
+    [[nodiscard]] const std::map<unsigned int, std::vector<int>> &detectorCounts() const;
     std::map<unsigned int, gsl_histogram *> &detectorHistograms();
-    [[nodiscard]] const std::map<unsigned int, std::vector<double>> &partitions() const;
 
     /*
      * Manipulation
